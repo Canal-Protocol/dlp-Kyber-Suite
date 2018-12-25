@@ -7,7 +7,8 @@ const NetworkProxy = artifacts.require('./KyberNetworkProxy.sol');
 const ConversionRates = artifacts.require('./ConversionRates.sol');
 const LiquidityConversionRates = artifacts.require('./LiquidityConversionRates.sol');
 const SanityRates = artifacts.require('./SanityRates.sol');
-const Reserve = artifacts.require('./KyberReserve.sol');
+const FundReserve = artifacts.require('./KyberFundReserve.sol');
+const FundWallet = artifacts.require('./FundWallet.sol');
 const AutomatedReserve = artifacts.require('./KyberAutomatedReserve.sol');
 const FeeBurner = artifacts.require('./FeeBurner.sol');
 const WhiteList = artifacts.require('./WhiteList.sol');
@@ -73,7 +74,8 @@ module.exports = (deployer, network, accounts) => {
   console.log(`(ConversionRates) ${ConversionRates.address}`);
   console.log(`(LiquidityConversionRates) ${LiquidityConversionRates.address}`);
   console.log(`(SanityRates) ${SanityRates.address}`);
-  console.log(`(KyberReserve) ${Reserve.address}`);
+  //fund wallet
+  console.log(`(KyberFundReserve) ${FundReserve.address}`);
   console.log(`(AutomatedKyberReserve) ${AutomatedReserve.address}`);
   console.log(`(FeeBurner) ${FeeBurner.address}`);
   console.log(`(WhiteList) ${WhiteList.address}`);

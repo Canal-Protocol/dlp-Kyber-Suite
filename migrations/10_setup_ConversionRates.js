@@ -4,7 +4,7 @@ const BN = require('bn.js');
 const fs = require('fs');
 
 const ConversionRates = artifacts.require('./ConversionRates.sol');
-const Reserve = artifacts.require('./KyberReserve.sol');
+const FundReserve = artifacts.require('./KyberFundReserve.sol');
 
 const KNC = artifacts.require('./mockTokens/KyberNetworkCrystal.sol');
 const OMG = artifacts.require('./mockTokens/OmiseGo.sol');
@@ -97,7 +97,7 @@ module.exports = async (deployer, network, accounts) => {
 
   // Set the KyberReserve address and use the txReceipt to get the latest block number
   // for setting the baseRate
-  const blockNumber = tx(await ConversionRatesInstance.setReserveAddress(Reserve.address), 'setReserveAddress()');
+  const blockNumber = tx(await ConversionRatesInstance.setReserveAddress(FundReserve.address), 'setReserveAddress()');
 
   // Setup baseBuy and baseSell for setting the baseRate of the listed tokens
   Object.keys(tokenConfig.Reserve).forEach((key) => {

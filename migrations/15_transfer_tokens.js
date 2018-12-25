@@ -3,7 +3,10 @@
 const BN = require('bn.js');
 const fs = require('fs');
 
-const Reserve = artifacts.require('./KyberReserve.sol');
+const FundReserve = artifacts.require('./KyberFundReserve.sol');
+
+//we use fund wallet to hold funds instead of reserve
+const FundWallet = artifacts.require('./FundWallet.sol');
 
 const KNC = artifacts.require('./mockTokens/KyberNetworkCrystal.sol');
 const OMG = artifacts.require('./mockTokens/OmiseGo.sol');
@@ -29,7 +32,8 @@ module.exports = async (deployer, network, accounts) => {
   const userWallet = accounts[4];
 
   // Set the instances
-  const ReserveInstance = await Reserve.at(Reserve.address);
+  const FundReserveInstance = await FundReserve.at(FundReserve.address);
+  const FundWalletInstance = await FundWallet.at(FundWallet.address);
   const KNCInstance = await KNC.at(KNC.address);
   const OMGInstance = await OMG.at(OMG.address);
   const SALTInstance = await SALT.at(SALT.address);
@@ -60,15 +64,17 @@ module.exports = async (deployer, network, accounts) => {
   tx(await ZILInstance.transfer(userWallet, ZILAmount), 'transfer()');
   tx(await MANAInstance.transfer(userWallet, MANAAmount), 'transfer()');
 
-  // Transfer tokens and ETH to the reserve
-  tx(await KNCInstance.transfer(Reserve.address, KNCAmount), 'transfer()');
-  tx(await OMGInstance.transfer(Reserve.address, OMGAmount), 'transfer()');
-  tx(await SALTInstance.transfer(Reserve.address, SALTAmount), 'transfer()');
-  tx(await ZILInstance.transfer(Reserve.address, ZILAmount), 'transfer()');
-  tx(
+  // Transfer tokens and ETH to the fund reserve
+  tx(await KNCInstance.transfer(FundWallet.address, KNCAmount), 'transfer()');
+  tx(await OMGInstance.transfer(FundWallet.address, OMGAmount), 'transfer()');
+  tx(await SALTInstance.transfer(FundWallet.address, SALTAmount), 'transfer()');
+  tx(await ZILInstance.transfer(FundWallet.address, ZILAmount), 'transfer()');
+
+  //we do not send funds to fundwallet - contributors do
+  /* tx(
     await ReserveInstance.sendTransaction(
       { from: admin, value: web3.utils.toWei(new BN(100)) },
     ),
     'sendTransaction()',
-  );
+  ); */
 };

@@ -5,7 +5,8 @@ const NetworkProxy = artifacts.require('./KyberNetworkProxy.sol');
 const ConversionRates = artifacts.require('./ConversionRates.sol');
 const LiquidityConversionRates = artifacts.require('./LiquidityConversionRates.sol');
 const SanityRates = artifacts.require('./SanityRates.sol');
-const Reserve = artifacts.require('./KyberReserve.sol');
+const FundWallet = artifacts.require('./FundWallet.sol');
+const FundReserve = artifacts.require('./KyberFundReserve.sol');
 const AutomatedReserve = artifacts.require('./KyberAutomatedReserve.sol');
 const FeeBurner = artifacts.require('./FeeBurner.sol');
 const WhiteList = artifacts.require('./WhiteList.sol');
@@ -20,14 +21,16 @@ const MANA = artifacts.require('./mockTokens/Mana.sol');
 
 module.exports = async (deployer, network, accounts) => {
   const admin = accounts[0];
+  const backupAdmin = accounts[1];
 
   // Deploy the contracts
   await deployer.deploy(Network, admin);
   await deployer.deploy(NetworkProxy, admin);
   await deployer.deploy(ConversionRates, admin);
   await deployer.deploy(LiquidityConversionRates, admin, MANA.address);
+  await deployer.deploy(FundWallet, admin, backupAdmin);
   await deployer.deploy(SanityRates, admin);
-  await deployer.deploy(Reserve, Network.address, ConversionRates.address, admin);
+  await deployer.deploy(FundReserve, Network.address, ConversionRates.address, FundWallet.address, admin);
   await deployer.deploy(AutomatedReserve, Network.address, LiquidityConversionRates.address, admin);
   await deployer.deploy(FeeBurner, admin, KNC.address, Network.address);
   await deployer.deploy(WhiteList, admin, KGT.address);

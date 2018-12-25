@@ -5,7 +5,8 @@ const fs = require('fs');
 const Network = artifacts.require('./KyberNetwork.sol');
 const ConversionRates = artifacts.require('./ConversionRates.sol');
 const SanityRates = artifacts.require('./SanityRates.sol');
-const Reserve = artifacts.require('./KyberReserve.sol');
+const FundWallet = artifacts.require('./FundWallet.sol');
+const FundReserve = artifacts.require('./KyberFundReserve.sol');
 
 const KNC = artifacts.require('./mockTokens/KyberNetworkCrystal.sol');
 const OMG = artifacts.require('./mockTokens/OmiseGo.sol');
@@ -32,11 +33,11 @@ module.exports = async (deployer, network, accounts) => {
 
   // Set the instances
   const NetworkInstance = await Network.at(Network.address);
-  const ReserveInstance = await Reserve.at(Reserve.address);
+  const FundReserveInstance = await FundReserve.at(FundReserve.address);
 
   // Set the reserve contract addresses
   tx(
-    await ReserveInstance.setContracts(
+    await FundReserveInstance.setContracts(
       Network.address,
       ConversionRates.address,
       SanityRates.address,
@@ -44,20 +45,29 @@ module.exports = async (deployer, network, accounts) => {
     'setContracts()',
   );
 
-  // Add reserve to network
-  tx(await NetworkInstance.addReserve(Reserve.address, true), 'addReserve()');
+  //set fund wallet
+  tx(
+    await FundReserveInstance.setFundWallet(
+      FundWallet.address,
+    ),
+    'setFundWallet()',
+  );
 
+  // Add reserve to network
+  tx(await NetworkInstance.addReserve(FundReserve.address, true), 'addReserve()');
+
+  //i think reserve - as json unchanged
   Object.keys(tokenConfig.Reserve).forEach(async (key) => {
     // Add the withdrawal address for each token
     tx(
-      await ReserveInstance.approveWithdrawAddress(eval(key).address, reserveWallet, true),
+      await FundReserveInstance.approveWithdrawAddress(eval(key).address, reserveWallet, true),
       'approveWithdrawAddress()',
     );
 
     // List token pairs for the reserve
     tx(
       await NetworkInstance.listPairForReserve(
-        Reserve.address,
+        FundReserve.address,
         eval(key).address,
         true,
         true,

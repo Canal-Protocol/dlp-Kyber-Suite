@@ -2,7 +2,7 @@
 /* eslint-disable no-unused-vars, no-eval */
 const fs = require('fs');
 
-const Reserve = artifacts.require('./KyberReserve.sol');
+const FundReserve = artifacts.require('./KyberFundReserve.sol');
 const FeeBurner = artifacts.require('./FeeBurner.sol');
 
 const networkConfig = JSON.parse(fs.readFileSync('../config/network.json', 'utf8'));
@@ -30,7 +30,7 @@ module.exports = async (deployer, network, accounts) => {
   // Set the reserve data
   tx(
     await FeeBurnerInstance.setReserveData(
-      Reserve.address,
+      FundReserve.address,
       networkConfig.FeeBurner.reserveFees,
       reserveWallet,
     ),
