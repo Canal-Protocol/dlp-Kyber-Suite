@@ -74,7 +74,7 @@ module.exports = (deployer, network, accounts) => {
   console.log(`(ConversionRates) ${ConversionRates.address}`);
   console.log(`(LiquidityConversionRates) ${LiquidityConversionRates.address}`);
   console.log(`(SanityRates) ${SanityRates.address}`);
-  //fund wallet
+  console.log(`(FundWallet) ${FundWallet.address}`);
   console.log(`(KyberFundReserve) ${FundReserve.address}`);
   console.log(`(AutomatedKyberReserve) ${AutomatedReserve.address}`);
   console.log(`(FeeBurner) ${FeeBurner.address}`);
