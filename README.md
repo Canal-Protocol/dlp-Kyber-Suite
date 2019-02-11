@@ -1,6 +1,7 @@
 # Fund Wallet and Kyber Integration
 
 This repo is for testing the DLP infrastructure and ints integration with Kyber Network.
+Currently won't work due to ongoing work on tests - should work as below if "mockContracts" and "test" folders are removed.
 
 ## Prerequisites
 
