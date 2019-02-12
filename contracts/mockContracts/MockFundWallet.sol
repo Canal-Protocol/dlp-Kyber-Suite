@@ -3,7 +3,7 @@ pragma solidity 0.4.18;
 
 import "../ERC20Interface.sol";
 
-contract FundWallet {
+contract MockFundWallet {
     //experimental time periods
     uint start;
     uint adminP;
