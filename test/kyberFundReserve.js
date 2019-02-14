@@ -33,7 +33,7 @@ let fundWallet;
 //block data
 let priceUpdateBlock;
 let currentBlock;
-let validRateDurationInBlocks = 1000;
+let validRateDurationInBlocks = 10000;
 
 //tokens data
 ////////////
@@ -75,7 +75,8 @@ let indices = [];
 let compactBuyArr = [];
 let compactSellArr = [];
 
-//init; KyberFundReserve, TestToken, MockFundWallet, ConversionRates, admin, operator, user, send tokens and ether to MockFundWallet;
+//remember to remove walletForToken stuffs
+
 contract('KyberFundReserve', function(accounts) {
   it("should init globals. init ConversionRates Inst, init tokens and add to pricing inst. set basic data per token.", async function () {
         // set account addresses
@@ -155,19 +156,42 @@ contract('KyberFundReserve', function(accounts) {
        }
    });
 
-   //it shoudl init mockfundwallet here, send token/ether balance here instead
+   //it shoudl init reserve and mockfundwallet here, send token/ether balance here instead
 
-   it("should init reserve and set fundWallet", async function () {
+   it("should init reserve and fundWallet and send tokens/ether to fundWallet", async function () {
         reserveInst = await Reserve.new(network, convRatesInst.address, admin);
         await reserveInst.setContracts(network, convRatesInst.address, 0);
-
-        //set fund wallet here
 
         await reserveInst.addOperator(operator);
         await reserveInst.addAlerter(alerter);
         await convRatesInst.setReserveAddress(reserveInst.address);
         for (let i = 0; i < numTokens; ++i) {
             await reserveInst.approveWithdrawAddress(tokenAdd[i],accounts[0],true);
+        }
+
+        //set fund wallet here
+        fundWalletInst = await MockFundWallet.new(reserveInst.address, 60, 60, 60, 60);
+
+        //note may not have enough ether/tokens for the 2 rounds of testing
+        //send tokens and ethers
+        //set reserve balance. 10000 wei ether + per token 1000 wei ether value according to base price.
+        let fundWalletEtherInit = 5000 * 2;
+        await Helper.sendEtherWithPromise(accounts[9], fundWalletInst.address, fundWalletEtherInit);
+
+        let balance = await Helper.getBalancePromise(fundWalletInst.address);
+        expectedFundWalletBalanceWei = balance.valueOf();
+
+        assert.equal(balance.valueOf(), fundWalletEtherInit, "wrong ether balance");
+
+        //transfer tokens to reserve. each token same wei balance
+        for (let i = 0; i < numTokens; ++i) {
+            token = tokens[i];
+            let amount = (new BigNumber(fundWalletEtherInit)).mul(baseBuyRate[i]).div(precisionUnits);
+            await token.transfer(fundWalletInst.address, amount.valueOf());
+            let balance = await token.balanceOf(fundWalletInst.address);
+            assert.equal(amount.valueOf(), balance.valueOf());
+            reserveTokenBalance.push(amount);
+            reserveTokenImbalance.push(new BigNumber(0));
         }
     });
 
@@ -192,14 +216,204 @@ contract('KyberFundReserve', function(accounts) {
     });
 
     //test reverted scenario for set fund wallet call
+    it("should test reverted scenario for set fundWallet call.", async function () {
+        //legal call
+        await reserveInst.setFundWallet(fundWalletInst.address, {from:admin});
 
-    //adminP tests jump to time in first unit test(getBalance, getConversion Rates, withdraw, trade should all fail or return 0)
+        try {
+            await reserveInst.setFundWallet(0, {from:admin});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+    });
+
+    //adminP tests jump to time in first unit test (getConversion Rates, withdraw, trade(try buy and sell) should all fail or return 0)
+    it("should return 0 conversion rates for ether and token in adminP.", async function() {
+      //jump forward time maybe?
+      let tokenInd = 3;
+      let token = tokens[tokenInd]; //choose some token
+      let amountWei = 2 * 1;
+      let amountTwei = 25 * 1;
+
+      let buyRate = await reserveInst.getConversionRate(ethAddress, tokenAdd[tokenInd], amountWei, currentBlock);
+      let sellRate = await reserveInst.getConversionRate(tokenAdd[tokenInd], ethAddress, amountTwei, currentBlock);
+
+      //check correct rate calculated
+      assert.equal(buyRate.valueOf(), 0, "unexpected rate.");
+      //check correct rate calculated
+      assert.equal(sellRate.valueOf(), 0, "unexpected rate.");
+
+    });
+
+    it("should fail withdraw for both ether and token.", async function(){
+      let tokenInd = 1;
+      let amount = 10;
+      let token = tokens[tokenInd];
+
+      // first token
+      await reserveInst.approveWithdrawAddress(tokenAdd[tokenInd], withDrawAddress, true);
+      await reserveInst.withdraw(tokenAdd[tokenInd], amount, withDrawAddress, {from: operator});
+
+      //ether
+      await reserveInst.approveWithdrawAddress(ethAddress, withDrawAddress, true);
+      await reserveInst.withdraw(ethAddress, amount, withDrawAddress, {from: operator});
+
+      //try withdraw token - expect fail
+      try {
+          await reserveInst.withdraw(tokenAdd[tokenInd], amount, withDrawAddress, {from: operator});
+          assert(false, "throw was expected in line above.")
+      }
+      catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
+
+      //try withdraw ether - expect fail
+      try {
+          await reserveInst.withdraw(ethAddress, amount, withDrawAddress, {from: operator});
+          assert(false, "throw was expected in line above.")
+      }
+      catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
+
+    });
+
+    it("should fail buy in adminP.", async function () {
+      let tokenInd = 3;
+      let token = tokens[tokenInd]; //choose some token
+      let amountWei = 2 * 1;
+
+      let buyRate = await reserveInst.getConversionRate(ethAddress, tokenAdd[tokenInd], amountWei, currentBlock);
+
+      //try tade should fail
+      try {
+          await reserveInst.trade(ethAddress, amountWei, tokenAdd[tokenInd], user1, buyRate, true, {from:network, value:amountWei});
+          assert(false, "throw was expected in line above.")
+      } catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
+
+    });
+
+    it("should fail sell in adminP.", async function () {
+      let tokenInd = 3;
+      let token = tokens[tokenInd]; //choose some token
+      let amountTwei = 25 * 1;
+
+      //so here transfer tokens to network and approve allowance from network to reserve.
+      await token.transfer(network, amountTwei);
+
+      //get sell rate
+      let sellRate = await reserveInst.getConversionRate(tokenAdd[tokenInd], ethAddress, amountTwei, currentBlock);
+
+      //pre trade step, approve allowance from user to network.
+      await token.approve(reserveInst.address, amountTwei, {from: network});
+
+      //try tade should fail
+      try {
+          await reserveInst.trade(tokenAdd[tokenInd], amountTwei, ethAddress, user2, sellRate, true, {from:network});
+          assert(false, "throw was expected in line above.")
+      } catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
+    });
 
     //raiseP tests jump to time in first unit test(getBalance, getConversion Rates, withdraw, trade should all fail or return 0)
+    it("should return 0 conversion rates for ether and token in adminP.", async function() {
+      //jump forward time!!
+      let tokenInd = 3;
+      let token = tokens[tokenInd]; //choose some token
+      let amountWei = 2 * 1;
+      let amountTwei = 25 * 1;
+
+      let buyRate = await reserveInst.getConversionRate(ethAddress, tokenAdd[tokenInd], amountWei, currentBlock);
+      let sellRate = await reserveInst.getConversionRate(tokenAdd[tokenInd], ethAddress, amountTwei, currentBlock);
+
+      //check correct rate calculated
+      assert.equal(buyRate.valueOf(), 0, "unexpected rate.");
+      //check correct rate calculated
+      assert.equal(sellRate.valueOf(), 0, "unexpected rate.");
+
+    });
+
+    it("should fail withdraw for both ether and token.", async function(){
+      let tokenInd = 1;
+      let amount = 10;
+      let token = tokens[tokenInd];
+
+      // first token
+      await reserveInst.approveWithdrawAddress(tokenAdd[tokenInd], withDrawAddress, true);
+      await reserveInst.withdraw(tokenAdd[tokenInd], amount, withDrawAddress, {from: operator});
+
+      //ether
+      await reserveInst.approveWithdrawAddress(ethAddress, withDrawAddress, true);
+      await reserveInst.withdraw(ethAddress, amount, withDrawAddress, {from: operator});
+
+      //try withdraw token - expect fail
+      try {
+          await reserveInst.withdraw(tokenAdd[tokenInd], amount, withDrawAddress, {from: operator});
+          assert(false, "throw was expected in line above.")
+      }
+      catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
+
+      //try withdraw ether - expect fail
+      try {
+          await reserveInst.withdraw(ethAddress, amount, withDrawAddress, {from: operator});
+          assert(false, "throw was expected in line above.")
+      }
+      catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
+
+    });
+
+    it("should fail buy in adminP.", async function () {
+      let tokenInd = 3;
+      let token = tokens[tokenInd]; //choose some token
+      let amountWei = 2 * 1;
+
+      let buyRate = await reserveInst.getConversionRate(ethAddress, tokenAdd[tokenInd], amountWei, currentBlock);
+
+      //try tade should fail
+      try {
+          await reserveInst.trade(ethAddress, amountWei, tokenAdd[tokenInd], user1, buyRate, true, {from:network, value:amountWei});
+          assert(false, "throw was expected in line above.")
+      } catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
+
+    });
+
+    it("should fail sell in adminP.", async function () {
+      let tokenInd = 3;
+      let token = tokens[tokenInd]; //choose some token
+      let amountTwei = 25 * 1;
+
+      //so here transfer tokens to network and approve allowance from network to reserve.
+      await token.transfer(network, amountTwei);
+
+      //get sell rate
+      let sellRate = await reserveInst.getConversionRate(tokenAdd[tokenInd], ethAddress, amountTwei, currentBlock);
+
+      //pre trade step, approve allowance from user to network.
+      await token.approve(reserveInst.address, amountTwei, {from: network});
+
+      //try tade should fail
+      try {
+          await reserveInst.trade(tokenAdd[tokenInd], amountTwei, ethAddress, user2, sellRate, true, {from:network});
+          assert(false, "throw was expected in line above.")
+      } catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
+    });
 
     //opeprateP jump to time tests in first unit test
     //small buys -- success
     it("should perform small buy (no steps) and check: balances changed, rate is expected rate.", async function () {
+      //jump forward time!!
        let tokenInd = 3;
        let token = tokens[tokenInd]; //choose some token
        let amountWei = 2 * 1;
@@ -218,16 +432,22 @@ contract('KyberFundReserve', function(accounts) {
        await reserveInst.trade(ethAddress, amountWei, tokenAdd[tokenInd], user1, buyRate, true, {from:network, value:amountWei});
 
        //check higher ether balance on fundWallet
+       expectedReserveBalanceWei = (expectedReserveBalanceWei * 1) + amountWei;
+       expectedReserveBalanceWei -= expectedReserveBalanceWei % 1;
+       let balance = await reserveInst.getBalance(ethAddress);
+       assert.equal(balance.valueOf(), expectedReserveBalanceWei, "bad reserve balance wei")
 
        //check token balances
-       ///////////////////////
-
        //check token balance on user1
        let tokenTweiBalance = await token.balanceOf(user1);
        let expectedTweiAmount = expectedRate.mul(amountWei).div(precisionUnits);
        assert.equal(tokenTweiBalance.valueOf(), expectedTweiAmount.valueOf(), "bad token balance");
 
        //check lower token balance on fundWallet
+       reserveTokenBalance[tokenInd] -= expectedTweiAmount;
+       reserveTokenImbalance[tokenInd] = reserveTokenImbalance[tokenInd].add(expectedTweiAmount); //imbalance represents how many missing tokens
+       let reportedBalance = await reserveInst.getBalance(tokenAdd[tokenInd]);
+       assert.equal(reportedBalance.valueOf(), reserveTokenBalance[tokenInd].valueOf(), "bad token balance on reserve");
    });
     //stepped buy
     it("should perform a few buys with steps and check: correct balances change, rate is expected rate.", async function () {
@@ -267,8 +487,14 @@ contract('KyberFundReserve', function(accounts) {
         };
 
         //check higher ether balance on fundWallet
+        expectedReserveBalanceWei = (expectedReserveBalanceWei * 1) + totalWei;
+        expectedReserveBalanceWei -= expectedReserveBalanceWei % 1;
+        let balance = await reserveInst.getBalance(ethAddress);
+        assert.equal(balance.valueOf(), expectedReserveBalanceWei, "bad reserve balance");
 
         //check lower token balance in fundWallet
+        let reportedBalance = await reserveInst.getBalance(tokenAdd[tokenInd]);
+        assert.equal(reportedBalance.valueOf(), reserveTokenBalance[tokenInd].valueOf(), "bad token balance on reserve");
 
         //check token balance on user1
         let tokenTweiBalance = await token.balanceOf(user1);
@@ -304,6 +530,10 @@ contract('KyberFundReserve', function(accounts) {
         await reserveInst.trade(tokenAdd[tokenInd], amountTwei, ethAddress, user2, sellRate, true, {from:network});
 
         //check lower ether balance on fundWallet
+        let amountWei = (new BigNumber(amountTwei).mul(expectedRate)).div(precisionUnits).floor();
+        expectedReserveBalanceWei = (new BigNumber(expectedReserveBalanceWei)).sub(amountWei).floor();
+        let balance = await reserveInst.getBalance(ethAddress);
+        assert.equal(balance.valueOf(), expectedReserveBalanceWei.valueOf(), "bad reserve balance wei");
 
         //check token balances
         ///////////////////////
@@ -314,6 +544,10 @@ contract('KyberFundReserve', function(accounts) {
         assert.equal(tokenTweiBalance.valueOf(), 0, "bad token balance");
 
         //check token balance on fundWallet was updated (higher)
+        reserveTokenBalance[tokenInd] += (amountTwei * 1);
+        reserveTokenImbalance[tokenInd] = reserveTokenImbalance[tokenInd].sub(amountTwei); //imbalance represents how many missing tokens
+        let reportedBalance = await reserveInst.getBalance(tokenAdd[tokenInd]);
+        assert.equal(reportedBalance.valueOf(), reserveTokenBalance[tokenInd].valueOf(), "bad token balance on reserve");
     });
 
     //stepped sells
@@ -351,6 +585,10 @@ contract('KyberFundReserve', function(accounts) {
             await reserveInst.trade(tokenAdd[tokenInd], amountTwei, ethAddress, user2, sellRate, true, {from:network});
 
             //check lower ether balance on fundWallet
+            let amountWei = (new BigNumber(amountTwei).mul(expectedRate)).div(precisionUnits).floor();
+            expectedReserveBalanceWei = (new BigNumber(expectedReserveBalanceWei)).sub(amountWei).floor();
+            let balance = await reserveInst.getBalance(ethAddress);
+            assert.equal(balance.valueOf(), expectedReserveBalanceWei.valueOf(), "bad reserve balance wei");
 
             //check token balances
             ///////////////////////
@@ -360,13 +598,13 @@ contract('KyberFundReserve', function(accounts) {
 
             assert.equal(tokenTweiBalance.valueOf(), 0, "bad token balance network");
 
-            //check token balance on fundWallet was updated (higher)
+            //check token balance on fundWallet was updated (higher)reserveTokenBalance[tokenInd] += (amountTwei * 1);
+            reserveTokenBalance[tokenInd] += (amountTwei * 1);
+            reserveTokenImbalance[tokenInd] = reserveTokenImbalance[tokenInd].sub(amountTwei); //imbalance represents how many missing tokens
+            let reportedBalance = await reserveInst.getBalance(tokenAdd[tokenInd]);
+            assert.equal(reportedBalance.valueOf(), reserveTokenBalance[tokenInd].valueOf(), "bad token balance on reserve");
         }
     });
-
-    //should return non zero getBalance ether
-
-    //should return non zero getBalance token
 
     //should verify trade success when validation disabled
     it("should verify trade success when validation disabled.", async function () {
@@ -391,6 +629,10 @@ contract('KyberFundReserve', function(accounts) {
         await reserveInst.trade(tokenAdd[tokenInd], amountTwei, ethAddress, user2, sellRate, false, {from:network});
 
         //check lower ether balance on fundWallet
+        let amountWei = (new BigNumber(amountTwei).mul(sellRate)).div(precisionUnits).floor();
+        expectedReserveBalanceWei = (new BigNumber(expectedReserveBalanceWei)).sub(amountWei).floor();
+        let balance = await reserveInst.getBalance(ethAddress);
+        assert.equal(balance.valueOf(), expectedReserveBalanceWei.valueOf(), "bad reserve balance wei");
 
         //check token balances
         ///////////////////////
@@ -401,7 +643,10 @@ contract('KyberFundReserve', function(accounts) {
         assert.equal(tokenTweiBalance.valueOf(), 0, "bad token balance");
 
         //check token balance on fundWallet was updated (higher)
-        //below is true since all tokens and ether have same decimals (18)
+        reserveTokenBalance[tokenInd] += (amountTwei * 1);
+        reserveTokenImbalance[tokenInd] = reserveTokenImbalance[tokenInd].sub(amountTwei); //imbalance represents how many missing tokens
+        let reportedBalance = await reserveInst.getBalance(tokenAdd[tokenInd]);
+        assert.equal(reportedBalance.valueOf(), reserveTokenBalance[tokenInd].valueOf(), "bad token balance on reserve");
     });
 
     //should test sell trade reverted without token approved. -- maybe don't repeat
@@ -573,7 +818,7 @@ contract('KyberFundReserve', function(accounts) {
         await reserveInst.withdraw(tokenAdd[tokenInd], amount, withDrawAddress, {from: operator});
 
         reserveTokenBalance[tokenInd] -= amount;
-        let   reportedBalance = await token.balanceOf(walletForToken);
+        let reportedBalance = await reserveInst.getBalance(tokenAdd[tokenInd]);
         assert.equal(reportedBalance.valueOf(), reserveTokenBalance[tokenInd].valueOf(), "bad token balance on reserve");
 
         reportedBalance = await token.balanceOf(withDrawAddress);
@@ -757,7 +1002,7 @@ contract('KyberFundReserve', function(accounts) {
         //send funds back and then check again for non zero
     });
 
-    //liquidP tests
+    //liquidP tests include withdraw-- can withdraw token
     //small buys -- success
     it("should perform small buy (no steps) and check: balances changed, rate is expected rate.", async function () {
        let tokenInd = 3;
@@ -1015,9 +1260,99 @@ contract('KyberFundReserve', function(accounts) {
     });
 
     //claimP tests jump to time(getBalance, getConversion Rates, withdraw, trade should all fail or return 0)
+    it("should return 0 conversion rates for ether and token in adminP.", async function() {
+      //jump forward time maybe?
+      let tokenInd = 3;
+      let token = tokens[tokenInd]; //choose some token
+      let amountWei = 2 * 1;
+      let amountTwei = 25 * 1;
+
+      let buyRate = await reserveInst.getConversionRate(ethAddress, tokenAdd[tokenInd], amountWei, currentBlock);
+      let sellRate = await reserveInst.getConversionRate(tokenAdd[tokenInd], ethAddress, amountTwei, currentBlock);
+
+      //check correct rate calculated
+      assert.equal(buyRate.valueOf(), 0, "unexpected rate.");
+      //check correct rate calculated
+      assert.equal(sellRate.valueOf(), 0, "unexpected rate.");
+
+    });
+
+    it("should fail withdraw for both ether and token.", async function(){
+      let tokenInd = 1;
+      let amount = 10;
+      let token = tokens[tokenInd];
+
+      // first token
+      await reserveInst.approveWithdrawAddress(tokenAdd[tokenInd], withDrawAddress, true);
+      await reserveInst.withdraw(tokenAdd[tokenInd], amount, withDrawAddress, {from: operator});
+
+      //ether
+      await reserveInst.approveWithdrawAddress(ethAddress, withDrawAddress, true);
+      await reserveInst.withdraw(ethAddress, amount, withDrawAddress, {from: operator});
+
+      //try withdraw token - expect fail
+      try {
+          await reserveInst.withdraw(tokenAdd[tokenInd], amount, withDrawAddress, {from: operator});
+          assert(false, "throw was expected in line above.")
+      }
+      catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
+
+      //try withdraw ether - expect fail
+      try {
+          await reserveInst.withdraw(ethAddress, amount, withDrawAddress, {from: operator});
+          assert(false, "throw was expected in line above.")
+      }
+      catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
+
+    });
+
+    it("should fail buy in adminP.", async function () {
+      let tokenInd = 3;
+      let token = tokens[tokenInd]; //choose some token
+      let amountWei = 2 * 1;
+
+      let buyRate = await reserveInst.getConversionRate(ethAddress, tokenAdd[tokenInd], amountWei, currentBlock);
+
+      //try tade should fail
+      try {
+          await reserveInst.trade(ethAddress, amountWei, tokenAdd[tokenInd], user1, buyRate, true, {from:network, value:amountWei});
+          assert(false, "throw was expected in line above.")
+      } catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
+
+    });
+
+    it("should fail sell in adminP.", async function () {
+      let tokenInd = 3;
+      let token = tokens[tokenInd]; //choose some token
+      let amountTwei = 25 * 1;
+
+      //so here transfer tokens to network and approve allowance from network to reserve.
+      await token.transfer(network, amountTwei);
+
+      //get sell rate
+      let sellRate = await reserveInst.getConversionRate(tokenAdd[tokenInd], ethAddress, amountTwei, currentBlock);
+
+      //pre trade step, approve allowance from user to network.
+      await token.approve(reserveInst.address, amountTwei, {from: network});
+
+      //try tade should fail
+      try {
+          await reserveInst.trade(tokenAdd[tokenInd], amountTwei, ethAddress, user2, sellRate, true, {from:network});
+          assert(false, "throw was expected in line above.")
+      } catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
+    });
 
     //should test can't init this contract with empty contracts (address 0)
     it("should test can't init this contract with empty contracts (address 0).", async function () {
+      //jump forward time!!
         let reserve;
 
         try {
