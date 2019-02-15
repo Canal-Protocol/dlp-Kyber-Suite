@@ -76,6 +76,7 @@ let compactBuyArr = [];
 let compactSellArr = [];
 
 //remember to remove walletForToken stuffs
+//check that when balances are changing that wont cause error in later tests
 
 contract('KyberFundReserve', function(accounts) {
   it("should init globals. init ConversionRates Inst, init tokens and add to pricing inst. set basic data per token.", async function () {
@@ -1005,6 +1006,7 @@ contract('KyberFundReserve', function(accounts) {
     //liquidP tests include withdraw-- can withdraw token
     //small buys -- success
     it("should perform small buy (no steps) and check: balances changed, rate is expected rate.", async function () {
+      //jump forward time!!
        let tokenInd = 3;
        let token = tokens[tokenInd]; //choose some token
        let amountWei = 2 * 1;
@@ -1023,161 +1025,117 @@ contract('KyberFundReserve', function(accounts) {
        await reserveInst.trade(ethAddress, amountWei, tokenAdd[tokenInd], user1, buyRate, true, {from:network, value:amountWei});
 
        //check higher ether balance on fundWallet
+       expectedReserveBalanceWei = (expectedReserveBalanceWei * 1) + amountWei;
+       expectedReserveBalanceWei -= expectedReserveBalanceWei % 1;
+       let balance = await reserveInst.getBalance(ethAddress);
+       assert.equal(balance.valueOf(), expectedReserveBalanceWei, "bad reserve balance wei")
 
        //check token balances
-       ///////////////////////
-
        //check token balance on user1
        let tokenTweiBalance = await token.balanceOf(user1);
        let expectedTweiAmount = expectedRate.mul(amountWei).div(precisionUnits);
        assert.equal(tokenTweiBalance.valueOf(), expectedTweiAmount.valueOf(), "bad token balance");
 
        //check lower token balance on fundWallet
+       reserveTokenBalance[tokenInd] -= expectedTweiAmount;
+       reserveTokenImbalance[tokenInd] = reserveTokenImbalance[tokenInd].add(expectedTweiAmount); //imbalance represents how many missing tokens
+       let reportedBalance = await reserveInst.getBalance(tokenAdd[tokenInd]);
+       assert.equal(reportedBalance.valueOf(), reserveTokenBalance[tokenInd].valueOf(), "bad token balance on reserve");
    });
 
     //stepped buy -- success
     it("should perform a few buys with steps and check: correct balances change, rate is expected rate.", async function () {
-        let tokenInd = 2;
-        let token = tokens[tokenInd]; //choose some token
-        let amountWei;
-        let totalWei = 0;
-        let totalExpectedTwei = 0;
+      let tokenInd = 2;
+      let token = tokens[tokenInd]; //choose some token
+      let amountWei;
+      let totalWei = 0;
+      let totalExpectedTwei = 0;
 
-        for (let i = 0; i > 19; i++) {
-            amountWei = (7 * i) + 11 * 1;
-            let buyRate = await reserveInst.getConversionRate(ethAddress, tokenAdd[tokenInd], amountWei, currentBlock);
+      for (let i = 0; i > 19; i++) {
+          amountWei = (7 * i) + 11 * 1;
+          let buyRate = await reserveInst.getConversionRate(ethAddress, tokenAdd[tokenInd], amountWei, currentBlock);
 
-            //verify price/rate against set price
-            let expectedRate = (new BigNumber(baseBuyRate[tokenInd]));
-            //first calculate number of destination tokens according to basic rate
+          //verify price/rate against set price
+          let expectedRate = (new BigNumber(baseBuyRate[tokenInd]));
+          //first calculate number of destination tokens according to basic rate
 //            console.log("expected1" + expectedRate)
-            let destQty = (new BigNumber(amountWei).mul(expectedRate)).div(precisionUnits);
-            let extraBps = getExtraBpsForBuyQuantity(destQty);
-            expectedRate = addBps(expectedRate, extraBps);
+          let destQty = (new BigNumber(amountWei).mul(expectedRate)).div(precisionUnits);
+          let extraBps = getExtraBpsForBuyQuantity(destQty);
+          expectedRate = addBps(expectedRate, extraBps);
 //            console.log("expected2" + expectedRate)
-            extraBps = getExtraBpsForImbalanceBuyQuantity(reserveTokenImbalance[tokenInd].valueOf());
-            expectedRate = addBps(expectedRate, extraBps);
+          extraBps = getExtraBpsForImbalanceBuyQuantity(reserveTokenImbalance[tokenInd].valueOf());
+          expectedRate = addBps(expectedRate, extraBps);
 //console.log("expected3" + expectedRate)
 
-            //function calculateRateAmount(isBuy, tokenInd, srcQty, maxDestAmount)
+          //function calculateRateAmount(isBuy, tokenInd, srcQty, maxDestAmount)
 //            let expected = calculateRateAmount(true, tokenInd, amountWei)
 //            console.log("expected from function" + expected);
-            assert.equal(buyRate.valueOf(), expectedRate.valueOf(), "unexpected rate. loop: " + i);
+          assert.equal(buyRate.valueOf(), expectedRate.valueOf(), "unexpected rate. loop: " + i);
 
-            let expectedTweiAmount = expectedRate.mul(amountWei).div(precisionUnits);
-            totalExpectedTwei += (1 * expectedTweiAmount);
-            reserveTokenBalance[tokenInd].sub(expectedTweiAmount);
+          let expectedTweiAmount = expectedRate.mul(amountWei).div(precisionUnits);
+          totalExpectedTwei += (1 * expectedTweiAmount);
+          reserveTokenBalance[tokenInd].sub(expectedTweiAmount);
 
-            await reserveInst.trade(ethAddress, amountWei, tokenAdd[tokenInd], user1, buyRate, true, {from : network, value:amountWei});
-            totalWei += (1 * amountWei);
-        };
+          await reserveInst.trade(ethAddress, amountWei, tokenAdd[tokenInd], user1, buyRate, true, {from : network, value:amountWei});
+          totalWei += (1 * amountWei);
+      };
 
-        //check higher ether balance on fundWallet
+      //check higher ether balance on fundWallet
+      expectedReserveBalanceWei = (expectedReserveBalanceWei * 1) + totalWei;
+      expectedReserveBalanceWei -= expectedReserveBalanceWei % 1;
+      let balance = await reserveInst.getBalance(ethAddress);
+      assert.equal(balance.valueOf(), expectedReserveBalanceWei, "bad reserve balance");
 
-        //check lower token balance in fundWallet
+      //check lower token balance in fundWallet
+      let reportedBalance = await reserveInst.getBalance(tokenAdd[tokenInd]);
+      assert.equal(reportedBalance.valueOf(), reserveTokenBalance[tokenInd].valueOf(), "bad token balance on reserve");
 
-        //check token balance on user1
-        let tokenTweiBalance = await token.balanceOf(user1);
-        assert.equal(tokenTweiBalance.valueOf(), totalExpectedTwei.valueOf(), "bad token balance");
+      //check token balance on user1
+      let tokenTweiBalance = await token.balanceOf(user1);
+      assert.equal(tokenTweiBalance.valueOf(), totalExpectedTwei.valueOf(), "bad token balance");
     });
 
     //small sell -- should fail need to edit expected behaviour to this
-    it("should perform small sell and check: balances changed, rate is expected rate.", async function () {
-        let tokenInd = 3;
-        let token = tokens[tokenInd]; //choose some token
-        let amountTwei = 25 * 1;
+    it("should fail sell in liquidP.", async function () {
+      let tokenInd = 3;
+      let token = tokens[tokenInd]; //choose some token
+      let amountTwei = 25 * 1;
 
-        //no need to transfer initial balance to user
-        //in the full scenario. user approves network which collects the tokens and approves reserve
-        //which collects tokens from network.
-        //so here transfer tokens to network and approve allowance from network to reserve.
-        await token.transfer(network, amountTwei);
+      //so here transfer tokens to network and approve allowance from network to reserve.
+      await token.transfer(network, amountTwei);
 
-        //verify sell rate
-        let sellRate = await reserveInst.getConversionRate(tokenAdd[tokenInd], ethAddress, amountTwei, currentBlock);
+      //get sell rate
+      let sellRate = await reserveInst.getConversionRate(tokenAdd[tokenInd], ethAddress, amountTwei, currentBlock);
 
-        let expectedRate = (new BigNumber(baseSellRate[tokenInd]));
-        let extraBps = getExtraBpsForSellQuantity(amountTwei);
-        expectedRate = addBps(expectedRate, extraBps);
-        expectedRate.floor();
+      //pre trade step, approve allowance from user to network.
+      await token.approve(reserveInst.address, amountTwei, {from: network});
 
-        //check correct rate calculated
-        assert.equal(sellRate.valueOf(), expectedRate.valueOf(), "unexpected rate.");
-
-        //pre trade step, approve allowance from user to network.
-        await token.approve(reserveInst.address, amountTwei, {from: network});
-
-        //perform trade
-        await reserveInst.trade(tokenAdd[tokenInd], amountTwei, ethAddress, user2, sellRate, true, {from:network});
-
-        //check lower ether balance on fundWallet
-
-        //check token balances
-        ///////////////////////
-
-        //check token balance on network zeroed
-        let tokenTweiBalance = await token.balanceOf(network);
-
-        assert.equal(tokenTweiBalance.valueOf(), 0, "bad token balance");
-
-        //check token balance on fundWallet was updated (higher)
+      //try tade should fail
+      try {
+          await reserveInst.trade(tokenAdd[tokenInd], amountTwei, ethAddress, user2, sellRate, true, {from:network});
+          assert(false, "throw was expected in line above.")
+      } catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
     });
 
-    //stepped sells -- should fail need to edit expected behaviour to this
-    it("should perform a few sells with steps. check: balances changed, rate is expected rate.", async function () {
-        let tokenInd = 3;
-        let token = tokens[tokenInd]; //choose some token
+    it("should return 0 conversion rates for ether in liquidP.", async function() {
+      //jump forward time!!
+      let tokenInd = 3;
+      let token = tokens[tokenInd]; //choose some token
+      let amountWei = 2 * 1;
+      let amountTwei = 25 * 1;
 
-        //no need to transfer initial balance to user
-        //in the full scenario. user approves network which collects the tokens and approves reserve
-        //which collects tokens from network.
-        //so here transfer tokens to network and approve allowance from network to reserve.
-        for (let i = 0; i < 17; ++i)
-        {
-            let amountTwei = (i + 1) * 31;
+      let sellRate = await reserveInst.getConversionRate(tokenAdd[tokenInd], ethAddress, amountTwei, currentBlock);
 
-            await token.transfer(network, amountTwei);
+      //check correct rate calculated
+      assert.equal(sellRate.valueOf(), 0, "unexpected rate.");
 
-            //verify sell rate
-            let sellRate = await reserveInst.getConversionRate(tokenAdd[tokenInd], ethAddress, amountTwei, currentBlock);
-
-            let expectedRate = (new BigNumber(baseSellRate[tokenInd])).floor();
-            let extraBps = getExtraBpsForSellQuantity(amountTwei);
-            expectedRate = addBps(expectedRate, extraBps);
-            extraBps = getExtraBpsForImbalanceSellQuantity((reserveTokenImbalance[tokenInd].sub(amountTwei)));
-            expectedRate = addBps(expectedRate, extraBps);
-            expectedRate = expectedRate.floor();
-
-            //check correct rate calculated
-            assert.equal(sellRate.valueOf(), expectedRate.valueOf(), "unexpected rate.");
-
-            //pre trade step, approve allowance from network to reserve (on reserve test we skip step where user sends to netwok)
-            await token.approve(reserveInst.address, amountTwei, {from: network});
-
-            //perform trade
-            await reserveInst.trade(tokenAdd[tokenInd], amountTwei, ethAddress, user2, sellRate, true, {from:network});
-
-            //check lower ether balance on fundWallet
-
-            //check token balances
-            ///////////////////////
-
-            //check token balance on network zeroed
-            let tokenTweiBalance = await token.balanceOf(network);
-
-            assert.equal(tokenTweiBalance.valueOf(), 0, "bad token balance network");
-
-            //check token balance on fundWallet was updated (higher)
-        }
     });
-
-    //should return zero getBalance ether
-
-    //should return non zero getBalance token
 
 
     //should approve withdraw address and withdraw. token.
-    it("should approve withdraw address and withdraw. token and ether", async function () {
+    it("should approve withdraw address and withdraw token", async function () {
         let tokenInd = 1;
         let amount = 10;
         let token = tokens[tokenInd];
@@ -1187,81 +1145,37 @@ contract('KyberFundReserve', function(accounts) {
         await reserveInst.withdraw(tokenAdd[tokenInd], amount, withDrawAddress, {from: operator});
 
         reserveTokenBalance[tokenInd] -= amount;
-        let   reportedBalance = await token.balanceOf(walletForToken);
+        let reportedBalance = await reserveInst.getBalance(tokenAdd[tokenInd]);
         assert.equal(reportedBalance.valueOf(), reserveTokenBalance[tokenInd].valueOf(), "bad token balance on reserve");
 
         reportedBalance = await token.balanceOf(withDrawAddress);
         assert.equal(reportedBalance.valueOf(), amount, "bad token balance on withdraw address");
-
-        expectedReserveBalanceWei = await Helper.getBalancePromise(reserveInst.address);
-
-        //ether
-        await reserveInst.approveWithdrawAddress(ethAddress, withDrawAddress, true);
-        await reserveInst.withdraw(ethAddress, amount, withDrawAddress, {from: operator});
-
-        expectedReserveBalanceWei -= amount;
-        reportedBalance = await Helper.getBalancePromise(reserveInst.address);
-        assert.equal(reportedBalance.valueOf(), expectedReserveBalanceWei, "bad eth balance on reserve");
     });
 
-    //should test get conversion rate options -- fail if src is token edit to eth->token
-    it ("should test get conversion rate options", async function() {
-        let tokenInd = 3;
-        let amountTwei = 3;
+    //withdraw ether should fail
+    it("should fail withdraw for ether.", async function(){
+      let tokenInd = 1;
+      let amount = 10;
+      let token = tokens[tokenInd];
 
-        //test normal case.
-        let sellRate = await reserveInst.getConversionRate(tokenAdd[tokenInd], ethAddress, amountTwei, currentBlock);
+      //ether
+      await reserveInst.approveWithdrawAddress(ethAddress, withDrawAddress, true);
+      await reserveInst.withdraw(ethAddress, amount, withDrawAddress, {from: operator});
 
-        let expectedRate = (new BigNumber(baseSellRate[tokenInd])).floor();
-        let extraBps = getExtraBpsForSellQuantity(amountTwei);
-        expectedRate = addBps(expectedRate, extraBps);
-        extraBps = getExtraBpsForImbalanceSellQuantity((reserveTokenImbalance[tokenInd].sub(amountTwei)));
-        expectedRate = addBps(expectedRate, extraBps);
-        expectedRate = expectedRate.floor();
+      //try withdraw ether - expect fail
+      try {
+          await reserveInst.withdraw(ethAddress, amount, withDrawAddress, {from: operator});
+          assert(false, "throw was expected in line above.")
+      }
+      catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
 
-        //check correct rate calculated
-        assert.equal(sellRate.valueOf(), expectedRate.valueOf(), "unexpected rate.");
-
-        //disable trade and test
-        await reserveInst.disableTrade({from: alerter})
-        sellRate = await reserveInst.getConversionRate(tokenAdd[tokenInd], ethAddress, amountTwei, currentBlock);
-        assert.equal(0, sellRate.valueOf(), "rate not 0");
-        await reserveInst.enableTrade({from:admin});
-
-        //test normal case.
-        sellRate = await reserveInst.getConversionRate(tokenAdd[tokenInd], ethAddress, amountTwei, currentBlock);
-
-        //check correct rate calculated
-        assert.equal(sellRate.valueOf(), expectedRate.valueOf(), "unexpected rate.");
-    });
-
-    //get balance -- dest is token = positive, eth is dest 0;
-
-    //should zero reserve balance and see that get rate returns zero when not enough dest balance
-    it("should zero reserve balance and see that get rate returns zero when not enough dest balance", async function() {
-        let tokenInd = 1;
-        let amountTwei = maxPerBlockImbalance - 1;
-        let token = tokens[tokenInd];
-        let srcQty = 50; //some high number of figure out ~rate
-
-        //set to reserve
-        let balance = await token.balanceOf(/*reserve*/);
-        await reserveInst.approveWithdrawAddress(tokenAdd[tokenInd], withDrawAddress, true);
-        await reserveInst.withdraw(tokenAdd[tokenInd], balance, withDrawAddress, {from: operator});
-
-        balance = await token.balanceOf(walletForToken);
-
-        assert.equal(balance.valueOf(0), 0, "expected balance 0");
-
-        rate = await reserveInst.getConversionRate(ethAddress, tokenAdd[tokenInd], srcQty, currentBlock);
-        assert.equal(rate.valueOf(), 0, "expected rate 0");
-
-        //send funds back and then check again for non zero
     });
 
     //claimP tests jump to time(getBalance, getConversion Rates, withdraw, trade should all fail or return 0)
     it("should return 0 conversion rates for ether and token in adminP.", async function() {
-      //jump forward time maybe?
+      //jump forward time!!
       let tokenInd = 3;
       let token = tokens[tokenInd]; //choose some token
       let amountWei = 2 * 1;
