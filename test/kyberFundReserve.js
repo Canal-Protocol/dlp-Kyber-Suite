@@ -328,6 +328,8 @@ contract('KyberFundReserve', function(accounts) {
       let amountWei = 2 * 1;
       let amountTwei = 25 * 1;
 
+      await Helper.advanceTimeAndBlock(3600);
+
       let buyRate = await reserveInst.getConversionRate(ethAddress, tokenAdd[tokenInd], amountWei, currentBlock);
       let sellRate = await reserveInst.getConversionRate(tokenAdd[tokenInd], ethAddress, amountTwei, currentBlock);
 
@@ -411,13 +413,15 @@ contract('KyberFundReserve', function(accounts) {
       }
     });
 
-    //opeprateP jump to time tests in first unit test
+    //opperateP jump to time tests in first unit test
     //small buys -- success
     it("should perform small buy (no steps) and check: balances changed, rate is expected rate.", async function () {
       //jump forward time!!
        let tokenInd = 3;
        let token = tokens[tokenInd]; //choose some token
        let amountWei = 2 * 1;
+
+       await Helper.advanceTimeAndBlock(3600);
 
        //verify base rate
        let buyRate = await reserveInst.getConversionRate(ethAddress, tokenAdd[tokenInd], amountWei, currentBlock);
@@ -1011,6 +1015,8 @@ contract('KyberFundReserve', function(accounts) {
        let token = tokens[tokenInd]; //choose some token
        let amountWei = 2 * 1;
 
+       await Helper.advanceTimeAndBlock(3600);
+
        //verify base rate
        let buyRate = await reserveInst.getConversionRate(ethAddress, tokenAdd[tokenInd], amountWei, currentBlock);
        let expectedRate = (new BigNumber(baseBuyRate[tokenInd]));
@@ -1180,6 +1186,8 @@ contract('KyberFundReserve', function(accounts) {
       let token = tokens[tokenInd]; //choose some token
       let amountWei = 2 * 1;
       let amountTwei = 25 * 1;
+
+      await Helper.advanceTimeAndBlock(3600);
 
       let buyRate = await reserveInst.getConversionRate(ethAddress, tokenAdd[tokenInd], amountWei, currentBlock);
       let sellRate = await reserveInst.getConversionRate(tokenAdd[tokenInd], ethAddress, amountTwei, currentBlock);
