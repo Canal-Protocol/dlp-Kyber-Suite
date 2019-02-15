@@ -824,14 +824,14 @@ contract('KyberFundReserve', function(accounts) {
         reportedBalance = await token.balanceOf(withDrawAddress);
         assert.equal(reportedBalance.valueOf(), amount, "bad token balance on withdraw address");
 
-        expectedReserveBalanceWei = await Helper.getBalancePromise(reserveInst.address);
-
         //ether
+        expectedReserveBalanceWei = await reserveInst.getBalance(ethAddress);
+
         await reserveInst.approveWithdrawAddress(ethAddress, withDrawAddress, true);
         await reserveInst.withdraw(ethAddress, amount, withDrawAddress, {from: operator});
 
         expectedReserveBalanceWei -= amount;
-        reportedBalance = await Helper.getBalancePromise(reserveInst.address);
+        reportedBalance = await reserveInst.getBalance(ethAddress);
         assert.equal(reportedBalance.valueOf(), expectedReserveBalanceWei, "bad eth balance on reserve");
     });
 
@@ -978,8 +978,6 @@ contract('KyberFundReserve', function(accounts) {
         await reserveInst.setContracts(network, convRatesInst.address, 0, {from:admin});
     });
 
-    //get balance should return non zero for both
-
     //should zero reserve balance and see that get rate returns zero when not enough dest balance eth/token
     it("should zero reserve balance and see that get rate returns zero when not enough dest balance", async function() {
         let tokenInd = 1;
@@ -988,18 +986,20 @@ contract('KyberFundReserve', function(accounts) {
         let srcQty = 50; //some high number of figure out ~rate
 
         //set to reserve
-        let balance = await token.balanceOf(/*reserve*/);
+        let balance = await reserveInst.getBalance(tokenAdd[tokenInd]);
         await reserveInst.approveWithdrawAddress(tokenAdd[tokenInd], withDrawAddress, true);
         await reserveInst.withdraw(tokenAdd[tokenInd], balance, withDrawAddress, {from: operator});
 
-        balance = await token.balanceOf(walletForToken);
+        let balance1 = await reserveInst.getBalance(tokenAdd[tokenInd]);
 
-        assert.equal(balance.valueOf(0), 0, "expected balance 0");
+        assert.equal(balance1.valueOf(0), 0, "expected balance 0");
 
         rate = await reserveInst.getConversionRate(ethAddress, tokenAdd[tokenInd], srcQty, currentBlock);
         assert.equal(rate.valueOf(), 0, "expected rate 0");
 
         //send funds back and then check again for non zero
+        //send balance back
+        await token.transfer(fundWalletInst.address, balance);
     });
 
     //liquidP tests include withdraw-- can withdraw token
