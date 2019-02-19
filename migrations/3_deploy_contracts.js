@@ -44,6 +44,6 @@ module.exports = async (deployer, network, accounts) => {
   await deployer.deploy(SwapTokenToToken, NetworkProxy.address);
   await deployer.deploy(Trade, NetworkProxy.address);
 
-  await deployer.deploy(MockFundWallet, FundReserve.address, "60", "60", "60", "60");
+  await deployer.deploy(MockFundWallet, "60", "60", "60", "60");
   await deployer.deploy(TestToken, "test", "tst", "18");
 };

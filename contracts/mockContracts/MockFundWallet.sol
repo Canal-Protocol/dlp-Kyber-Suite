@@ -22,13 +22,19 @@ contract MockFundWallet {
     event EtherPulled(uint amount, address sendTo);
 
     /// @notice Constructor, initialises admin wallets.
-    function MockFundWallet(address _reserve, uint _adminP, uint _raiseP, uint _opperateP, uint _liquidP) public {
-        reserve = _reserve;
+    function MockFundWallet(uint _adminP, uint _raiseP, uint _opperateP, uint _liquidP) public {
         start = now;
         adminP = _adminP * (60 seconds);
         raiseP = _raiseP * (60 seconds);
         opperateP = _opperateP * (60 seconds);
         liquidP = _liquidP * (60 seconds);
+    }
+
+    function setReserve(address _reserve) public {
+        reserve = _reserve;
+    }
+
+    function() public payable {
     }
 
     //functions to allow trading with reserve address
