@@ -1,7 +1,7 @@
 const Math = require('mathjs');
 const BigNumber = require('bignumber.js');
 
-module.exports.isRevertErrorMessage = function( error ) {
+isRevertErrorMessage = ( error ) => {
     if( error.message.search('invalid opcode') >= 0 ) return true;
     if( error.message.search('revert') >= 0 ) return true;
     if( error.message.search('out of gas') >= 0 ) return true;
@@ -9,7 +9,7 @@ module.exports.isRevertErrorMessage = function( error ) {
 };
 
 
-module.exports.sendEtherWithPromise = function( sender, recv, amount ) {
+sendEtherWithPromise = ( sender, recv, amount ) => {
     return new Promise(function(fulfill, reject){
             web3.eth.sendTransaction({to: recv, from: sender, value: amount}, function(error, result){
             if( error ) {
@@ -23,7 +23,7 @@ module.exports.sendEtherWithPromise = function( sender, recv, amount ) {
 };
 
 
-module.exports.getBalancePromise = function( account ) {
+getBalancePromise = ( account ) => {
     return new Promise(function (fulfill, reject){
         web3.eth.getBalance(account,function(err,result){
             if( err ) reject(err);
@@ -33,7 +33,7 @@ module.exports.getBalancePromise = function( account ) {
 };
 
 
-module.exports.getCurrentBlock = function() {
+getCurrentBlock = () => {
     return new Promise(function (fulfill, reject){
         web3.eth.getBlockNumber(function(err,result){
             if( err ) reject(err);
@@ -42,7 +42,7 @@ module.exports.getCurrentBlock = function() {
     });
 };
 
-module.exports.bytesToHex = function (byteArray) {
+bytesToHex = (byteArray) => {
     let strNum = toHexString(byteArray);
     let num = '0x' + strNum;
     return num;
@@ -55,9 +55,9 @@ function toHexString(byteArray) {
 };
 
 
-module.exports.sendPromise = function(method, params) {
+sendPromise = (method, params) => {
     return new Promise(function(fulfill, reject){
-        web3.currentProvider.sendAsync({
+        web3.currentProvider.send({
           jsonrpc: '2.0',
           method,
           params: params || [],
@@ -75,7 +75,7 @@ module.exports.sendPromise = function(method, params) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-module.exports.exp = function(num1,num2) {
+exp = (num1,num2) => {
     const num1Math = Math.bignumber(new BigNumber(num1).toString(10));
     const num2Math = Math.bignumber(new BigNumber(num2).toString(10));
 
@@ -84,7 +84,7 @@ module.exports.exp = function(num1,num2) {
     return new BigNumber(result.toString());
 };
 
-module.exports.ln = function(num) {
+ln = (num) => {
     const numMath = Math.bignumber(new BigNumber(num).toString(10));
 
     const result = Math.log(numMath);
@@ -117,7 +117,7 @@ function absDiff(num1,num2) {
     }
 };
 
-module.exports.assertAbsDiff = function(val1, val2, expectedDiffInPct, errorStr) {
+assertAbsDiff = (val1, val2, expectedDiffInPct, errorStr) => {
     val1 = val1.toString()
     val2 = val2.toString()
     assert(checkAbsDiff(val1,val2,expectedDiffInPct),
@@ -139,7 +139,7 @@ advanceTimeAndBlock = async (time) => {
 
 advanceTime = (time) => {
     return new Promise((resolve, reject) => {
-        web3.currentProvider.sendAsync({
+        web3.currentProvider.send({
             jsonrpc: "2.0",
             method: "evm_increaseTime",
             params: [time],
@@ -153,7 +153,7 @@ advanceTime = (time) => {
 
 advanceBlock = () => {
     return new Promise((resolve, reject) => {
-        web3.currentProvider.sendAsync({
+        web3.currentProvider.send({
             jsonrpc: "2.0",
             method: "evm_mine",
             id: new Date().getTime()
@@ -169,5 +169,14 @@ advanceBlock = () => {
 module.exports = {
     advanceTime,
     advanceBlock,
-    advanceTimeAndBlock
+    advanceTimeAndBlock,
+    bytesToHex,
+    isRevertErrorMessage,
+    sendEtherWithPromise,
+    getBalancePromise,
+    getCurrentBlock,
+    sendPromise,
+    exp,
+    ln,
+    assertAbsDiff
 }

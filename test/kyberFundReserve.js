@@ -6,6 +6,7 @@ const Reserve = artifacts.require("./KyberFundReserve");
 
 const Helper = require("./helper.js");
 const BigNumber = require('bignumber.js');
+const truffleAssert = require('truffle-assertions');
 
 //global vars
 const precisionUnits = (new BigNumber(10).pow(18));
@@ -122,8 +123,8 @@ contract('KyberFundReserve', function(accounts) {
        let ethersPerToken;
 
        for (i = 0; i < numTokens; ++i) {
-           tokensPerEther = (new BigNumber(precisionUnits.mul((i + 1) * 3)).floor());
-           ethersPerToken = (new BigNumber(precisionUnits.div((i + 1) * 3)).floor());
+           tokensPerEther = Math.floor(new BigNumber(precisionUnits*((i + 1) * 3)));
+           ethersPerToken = Math.floor(new BigNumber(precisionUnits.div((i + 1) * 3)));
            baseBuyRate.push(tokensPerEther.valueOf());
            baseSellRate.push(ethersPerToken.valueOf());
        }
@@ -160,6 +161,10 @@ contract('KyberFundReserve', function(accounts) {
    //it shoudl init reserve and mockfundwallet here, send token/ether balance here instead
 
    it("should init reserve and fundWallet and send tokens/ether to fundWallet", async function () {
+      //fix constructor for mock fund wallet deploy mock fund wallet and then reserve -- add to reserve constructor
+
+        await Helper.advanceTimeAndBlock(3600);
+        
         reserveInst = await Reserve.new(network, convRatesInst.address, admin);
         await reserveInst.setContracts(network, convRatesInst.address, 0);
 
