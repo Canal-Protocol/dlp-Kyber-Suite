@@ -1,86 +1,72 @@
-let TestToken = artifacts.require("./mockContracts/TestToken.sol");
+const TestToken = artifacts.require("./mockContracts/TestToken.sol");
+const FundWallet = artifacts.require("./FundWallet.sol");
 
-let Helper = require("./helper.js");
-let BigNumber = require('bignumber.js');
+const Helper = require("./helper.js");
+const BigNumber = require('bignumber.js');
+const truffleAssert = require('truffle-assertions');
 
 let admin;
 let backupAdmin;
-let contributior1;
-let ocntributor2;
+let contributor1;
+let contributor2;
 let reserve;
 
 const precisionUnits = (new BigNumber(10).pow(18));
-const ethAddress = '0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+const ethAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 const precision = new BigNumber(10).pow(18);
 
-//init variables (accounts, admins, tokens and wallets) stake, performance, contributors, time periods, reserve
+contract('FundWallet', function(accounts) {
 
-//failiure conditions of constrctor
+  it("Should init Fund Wallet and test token", async function () {
+        // set account addresses
+        admin = accounts[0];
+        backupAdmin = accounts[1];
+        contributor1 = accounts[2];
+        contributor2 = accounts[4];
+        contributor3 = accounts[5];
+        reserve = accounts[6];
 
-//admin hsould set reserve in adminP
+        fundWalletInst = await FundWallet.new(admin, backupAdmin);
 
-//fail if non adminn sets reserve
+        token = await TestToken.new("test", "tst", 18);
 
-//fail if reserve set in non admin P
+        await fundWalletInst.setTimePeriods("60", "60", "60", "60", {from:admin});
+    });
 
-//admins stake failiure
+    it("Should set fund scheme and check admin stake and performance fee is correct", async function () {
+        let egAdminStake = 1000;
+        let egAdminCarry = 2000;
 
-//fail amdin stake in non admin P
+        await fundWalletInst.setFundScheme(egAdminStake, egAdminCarry, {from:admin});
+      });
 
-//should change admin to back up
+      it("Should set reserve", async function () {
 
-//fail change admin otherwise
+          await fundWalletInst.setReserve(reserve, {from:admin});
+      });
 
-//fail if non admin adds contributors
+      it("Should add 3 contirbutors", async function () {
 
-//fail if not in admin P
+          await fundWalletInst.addContributor(contributor1, {from:admin});
+          await fundWalletInst.addContributor(contributor2, {from:admin});
+          await fundWalletInst.addContributor(contributor3, {from:admin});
 
-//fail if non admin removes contributors
+          let contributors = await fundWalletInst.getContributors();
 
-//fail if not in admin p
+          assert.equal(contributors.length, 3, "unexpected number of contributors");
+          assert.equal(contributors[0], contributor1, "contributor 1 is wrong");
+          assert.equal(contributors[1], contributor2, "contributor 2 is wrong");
+          assert.equal(contributors[2], contributor3, "contributor 3 is wrong");
+      });
 
-//contrib contribs in raise P
+      it("Should remove a contributor (contributor3)", async function () {
 
-//fail contribs for non contributors
+          await fundWalletInst.removeContributor(contributor3, {from:admin});
 
-//fail contribs if admin hasnt made theri contribution
+          let contributors = await fundWalletInst.getContributors();
+          assert.equal(contributors.length, 2, "unexpected number of contributors");
+          assert.equal(contributors[0], contributor1, "contributor 1 is wrong");
+          assert.equal(contributors[1], contributor2, "contributor 2 is wrong");
+      });
 
-//fail contribs if not in raisP
-
-//fail if already conrtib
-
-//refund contrib amount
-
-//fail if not in raiseP
-
-//fail if no deposit
-
-//fail if non conrtib
-
-//admin conrib in raiseP
-
-//fail if non admin
-
-//fail if already contrib
-
-//fail if not in raiseP
-
-//admin refund in raie p, only if admin has contributed and only if the total raised amount is only admin amount
-
-//admin withdraw token onli in opperate periods, fail in other epriods, fail if non admin
-
-//admin withdraw ether only in opperate perids, fail in other epriods, fail if non admin
-
-//log end balance, only if not logged, only in claimP
-
-//adminClaim public onlyAdmin inClaimP endBalanceIsLogged hasNotClaimed
-
-//contributorClaim public onlyContributor inClaimP endBalanceIsLogged hasNotClaimed
-
-//pull token only reserve only in opeprate and liquidP
-
-//pull ether only reserve only in opperateP
-
-//check balance only returns token bal in opperate and liquidP, and eth in opperate otherwise 0.
-
-//include balance checks after deposits refunds etc
+});

@@ -223,7 +223,7 @@ contract('KyberFundReserve', function(accounts) {
     });
 
     //test reverted scenario for set fund wallet call
-    it("should test reverted scenario for set fundWallet call.", async function () {
+    it("should test reverted scenario for set Fund Wallet call.", async function () {
         //legal call
         await reserveInst.setFundWallet(fundWalletInst.address, {from:admin});
 
@@ -236,7 +236,7 @@ contract('KyberFundReserve', function(accounts) {
     });
 
     //adminP tests jump to time in first unit test (getConversion Rates, withdraw, trade(try buy and sell) should all fail or return 0)
-    it("should return 0 conversion rates for ether and token in adminP.", async function() {
+    it("should return 0 conversion rates for ether and token in adminP (admin period).", async function() {
       //jump forward time maybe?
       let tokenInd = 3;
       let token = tokens[tokenInd]; //choose some token
@@ -253,7 +253,7 @@ contract('KyberFundReserve', function(accounts) {
 
     });
 
-    it("should fail withdraw for both ether and token.", async function(){
+    it("should fail withdraw for both ether and token in adminP (admin period).", async function(){
       let tokenInd = 1;
       let amount = 10;
       let token = tokens[tokenInd];
@@ -284,7 +284,7 @@ contract('KyberFundReserve', function(accounts) {
 
     });
 
-    it("should fail buy in adminP.", async function () {
+    it("should fail buy in adminP (admin period).", async function () {
       let tokenInd = 3;
       let token = tokens[tokenInd]; //choose some token
       let amountWei = 2 * 1;
@@ -301,7 +301,7 @@ contract('KyberFundReserve', function(accounts) {
 
     });
 
-    it("should fail sell in adminP.", async function () {
+    it("should fail sell in adminP (admin period).", async function () {
       let tokenInd = 3;
       let token = tokens[tokenInd]; //choose some token
       let amountTwei = 25 * 1;
@@ -325,7 +325,7 @@ contract('KyberFundReserve', function(accounts) {
     });
 
     //raiseP tests jump to time in first unit test(getBalance, getConversion Rates, withdraw, trade should all fail or return 0)
-    it("should return 0 conversion rates for ether and token in raiseP.", async function() {
+    it("should return 0 conversion rates for ether and token in raiseP (raise period).", async function() {
       //jump forward time!!
       let tokenInd = 3;
       let token = tokens[tokenInd]; //choose some token
@@ -344,7 +344,7 @@ contract('KyberFundReserve', function(accounts) {
 
     });
 
-    it("should fail withdraw for both ether and token.", async function(){
+    it("should fail withdraw for both ether and token in raiseP (raise period).", async function(){
       let tokenInd = 1;
       let amount = 10;
       let token = tokens[tokenInd];
@@ -375,7 +375,7 @@ contract('KyberFundReserve', function(accounts) {
 
     });
 
-    it("should fail buy in raiseP.", async function () {
+    it("should fail buy in raiseP (raise period).", async function () {
       let tokenInd = 3;
       let token = tokens[tokenInd]; //choose some token
       let amountWei = 2 * 1;
@@ -392,7 +392,7 @@ contract('KyberFundReserve', function(accounts) {
 
     });
 
-    it("should fail sell in raiseP.", async function () {
+    it("should fail sell in raiseP (raise period).", async function () {
       let tokenInd = 3;
       let token = tokens[tokenInd]; //choose some token
       let amountTwei = 25 * 1;
@@ -417,7 +417,7 @@ contract('KyberFundReserve', function(accounts) {
 
     //opperateP jump to time tests in first unit test
     //small buys -- success
-    it("should perform small buy (no steps) and check: balances changed, rate is expected rate.", async function () {
+    it("should perform small buy and check: balances, rate is expected rate. In opperateP (opperational period)", async function () {
       //jump forward time!!
        let tokenInd = 3;
        let token = tokens[tokenInd]; //choose some token
@@ -458,7 +458,7 @@ contract('KyberFundReserve', function(accounts) {
    });
 
     //small sell
-    it("should perform small sell and check: balances changed, rate is expected rate.", async function () {
+    it("should perform small sell and check: balances, rate is expected rate. In opperateP (opperational period)", async function () {
         let tokenInd = 3;
         let token = tokens[tokenInd]; //choose some token
         let amountTwei = 25 * 1;
@@ -720,7 +720,7 @@ contract('KyberFundReserve', function(accounts) {
     });
 
     //should approve withdraw address and withdraw. token and ether.
-    it("should approve withdraw address and withdraw. token and ether", async function () {
+    it("should approve withdraw address and withdraw; token and ether. In opperateP (opperational period)", async function () {
         let tokenInd = 1;
         let amount = 10;
         let token = tokens[tokenInd];
@@ -917,7 +917,7 @@ contract('KyberFundReserve', function(accounts) {
 
     //liquidP tests include withdraw-- can withdraw token
     //small buys -- success
-    it("should perform small buy (no steps) and check: balances changed, rate is expected rate.", async function () {
+    it("should perform small buy and check: balances, rate is expected rate. In liquidP (liquidation period)", async function () {
       //jump forward time!!
        let tokenInd = 3;
        let token = tokens[tokenInd]; //choose some token
@@ -961,7 +961,7 @@ contract('KyberFundReserve', function(accounts) {
    });
 
     //small sell -- should fail need to edit expected behaviour to this
-    it("should fail sell in liquidP.", async function () {
+    it("should fail sell in liquidP (liquidation period). Rationale: we don't want token balance to increase", async function () {
       let tokenInd = 3;
       let token = tokens[tokenInd]; //choose some token
       let amountTwei = 25 * 1;
@@ -984,7 +984,7 @@ contract('KyberFundReserve', function(accounts) {
       }
     });
 
-    it("should return 0 conversion rates for ether in liquidP.", async function() {
+    it("should return 0 conversion rates for ether in liquidP (liquidation period).", async function() {
       //jump forward time!!
       let tokenInd = 3;
       let token = tokens[tokenInd]; //choose some token
@@ -1000,7 +1000,7 @@ contract('KyberFundReserve', function(accounts) {
 
 
     //should approve withdraw address and withdraw. token.
-    it("should approve withdraw address and withdraw token", async function () {
+    it("should approve withdraw address and withdraw token in liquidP (liquidation period)", async function () {
         let tokenInd = 1;
         let amount = 10;
         let token = tokens[tokenInd];
@@ -1022,7 +1022,7 @@ contract('KyberFundReserve', function(accounts) {
     });
 
     //withdraw ether should fail
-    it("should fail withdraw for ether.", async function(){
+    it("should fail withdraw for ether in liquidP (liquidation period). Rationale: we only want token balance to decrease", async function(){
       let tokenInd = 1;
       let amount = 10;
       let token = tokens[tokenInd];
@@ -1042,7 +1042,7 @@ contract('KyberFundReserve', function(accounts) {
     });
 
     //claimP tests jump to time(getBalance, getConversion Rates, withdraw, trade should all fail or return 0)
-    it("should return 0 conversion rates for ether and token in claimP.", async function() {
+    it("should return 0 conversion rates for ether and token in claimP (claim period). Rationale: fund no longer opperating", async function() {
       //jump forward time!!
       let tokenInd = 3;
       let token = tokens[tokenInd]; //choose some token
@@ -1061,7 +1061,7 @@ contract('KyberFundReserve', function(accounts) {
 
     });
 
-    it("should fail withdraw for both ether and token.", async function(){
+    it("should fail withdraw for both ether and tokenin claimP (claim period). Rationale: fund no longer opperating", async function(){
       let tokenInd = 1;
       let amount = 10;
       let token = tokens[tokenInd];
@@ -1092,7 +1092,7 @@ contract('KyberFundReserve', function(accounts) {
 
     });
 
-    it("should fail buy in claimP.", async function () {
+    it("should fail buy in claimP (claim period). Rationale: fund no longer opperating", async function () {
       let tokenInd = 3;
       let token = tokens[tokenInd]; //choose some token
       let amountWei = 2 * 1;
@@ -1109,7 +1109,7 @@ contract('KyberFundReserve', function(accounts) {
 
     });
 
-    it("should fail sell in claimP.", async function () {
+    it("should fail sell in claimP (claim period). Rationale: fund no longer opperating", async function () {
       let tokenInd = 3;
       let token = tokens[tokenInd]; //choose some token
       let amountTwei = 25 * 1;
