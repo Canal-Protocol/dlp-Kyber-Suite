@@ -1,6 +1,6 @@
 # Fund Wallet and Kyber Integration
 
-This repo is for testing the DLP infrastructure and its integration with Kyber Network.
+This repo is for setting up a simulation of the DLP infrastructure and its integration with Kyber Network.
 
 ## Prerequisites
 
