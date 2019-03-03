@@ -91,6 +91,22 @@ contract('FundWallet', function(accounts) {
         }
 
         try {
+            await fundWalletInst.adminRefund({from:admin});
+            assert(false, "throw was expected in line above.")
+        }
+        catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        try {
+            await fundWalletInst.contributorRefund({from:contributor2});
+            assert(false, "throw was expected in line above.")
+        }
+        catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        try {
             await fundWalletInst.withdrawEther(etherWDAmt, admin, {from:admin});;
             assert(false, "throw was expected in line above.")
         }
@@ -187,6 +203,22 @@ contract('FundWallet', function(accounts) {
 
         try {
             await fundWalletInst.contributorDeposit({from:contributor1, value:corContAmount});
+            assert(false, "throw was expected in line above.")
+        }
+        catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        try {
+            await fundWalletInst.adminRefund({from:admin});
+            assert(false, "throw was expected in line above.")
+        }
+        catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        try {
+            await fundWalletInst.contributorRefund({from:contributor2});
             assert(false, "throw was expected in line above.")
         }
         catch(e){
@@ -707,6 +739,22 @@ contract('FundWallet', function(accounts) {
         }
 
         try {
+            await fundWalletInst.adminRefund({from:admin});
+            assert(false, "throw was expected in line above.")
+        }
+        catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        try {
+            await fundWalletInst.contributorRefund({from:contributor2});
+            assert(false, "throw was expected in line above.")
+        }
+        catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        try {
             await fundWalletInst.logEndBal();
             assert(false, "throw was expected in line above.")
         }
@@ -818,6 +866,22 @@ contract('FundWallet', function(accounts) {
 
         try {
             await fundWalletInst.contributorDeposit({from:contributor1, value:corContAmount});
+            assert(false, "throw was expected in line above.")
+        }
+        catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        try {
+            await fundWalletInst.adminRefund({from:admin});
+            assert(false, "throw was expected in line above.")
+        }
+        catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        try {
+            await fundWalletInst.contributorRefund({from:contributor2});
             assert(false, "throw was expected in line above.")
         }
         catch(e){
@@ -1051,6 +1115,22 @@ contract('FundWallet', function(accounts) {
         }
 
         try {
+            await fundWalletInst.adminRefund({from:admin});
+            assert(false, "throw was expected in line above.")
+        }
+        catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        try {
+            await fundWalletInst.contributorRefund({from:contributor2});
+            assert(false, "throw was expected in line above.")
+        }
+        catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        try {
             await fundWalletInst.withdrawEther(etherWDAmt, admin, {from:admin});;
             assert(false, "throw was expected in line above.")
         }
@@ -1140,6 +1220,223 @@ contract('FundWallet', function(accounts) {
           assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
       }
 
+    });
+
+});
+
+contract('FundWallet - aborted fund', function(accounts) {
+
+  it("Should init Fund Wallet and test token", async function () {
+      // set account addresses
+      admin = accounts[0];
+      backupAdmin = accounts[1];
+      contributor1 = accounts[2];
+      contributor2 = accounts[4];
+      contributor3 = accounts[5];
+      reserve = accounts[6];
+      outsideAcc = accounts[7];
+      newAdmin = accounts[8];
+      let egAdminStake = 1000;
+      let egAdminCarry = 2000;
+      let corContAmount = 500;
+
+      fundWalletInst = await FundWallet.new(admin, backupAdmin, {});
+
+      token = await TestToken.new("test", "tst", 18);
+
+      //success
+      await fundWalletInst.setTimePeriods("60", "60", "60", "60", {from:admin});
+
+      await fundWalletInst.setFundScheme(egAdminStake, egAdminCarry, {from:admin});
+
+      await fundWalletInst.setReserve(reserve, {from:admin});
+
+      await fundWalletInst.addContributor(contributor1, {from:admin});
+      await fundWalletInst.addContributor(contributor2, {from:admin});
+
+      await Helper.advanceTimeAndBlock(3650);
+
+      await fundWalletInst.adminDeposit({from:admin, value:egAdminStake});
+    });
+
+    it("Should remove contributor 1 on contributorRefund - even without deposit", async function () {
+      let egAdminStake = 1000;
+
+      await fundWalletInst.contributorRefund({from:contributor1});
+
+      let contributors = await fundWalletInst.getContributors();
+      assert.equal(contributors.length, 1, "unexpected number of contributors");
+      assert.equal(contributors[0], contributor2, "contributors are incorrect");
+
+      let balance = await Helper.getBalancePromise(fundWalletInst.address);
+      assert.equal(balance, egAdminStake, "incorrect balance")
+
+      let raisedBal = parseInt(await fundWalletInst.raisedBalance.call());
+      assert.equal(raisedBal, egAdminStake, "incorrect balance")
+
+    });
+
+    it("Should accept contribution from contributor 2 and then check adminRefund failiures", async function () {
+      let egAdminStake = 1000;
+      let corContAmount = 500;
+
+      await fundWalletInst.contributorDeposit({from:contributor2, value:corContAmount});
+
+      try {
+          await fundWalletInst.adminRefund({from:admin});
+          assert(false, "throw was expected in line above.")
+      }
+      catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
+    });
+
+    it("Should test contributorRefund and check balances", async function () {
+      let egAdminStake = 1000;
+
+      await fundWalletInst.contributorRefund({from:contributor2});
+
+      let contributors = await fundWalletInst.getContributors();
+      assert.equal(contributors.length, 0, "unexpected number of contributors");
+
+      let balance = await Helper.getBalancePromise(fundWalletInst.address);
+      assert.equal(balance, egAdminStake, "incorrect balance")
+
+      let raisedBal = parseInt(await fundWalletInst.raisedBalance.call());
+      assert.equal(raisedBal, egAdminStake, "incorrect balance");
+    });
+
+    it("Should fail contributorRefund when already refunded", async function () {
+
+      try {
+          await fundWalletInst.contributorRefund({from:contributor2});
+          assert(false, "throw was expected in line above.")
+      }
+      catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
+    });
+
+    it("Should test adminRefund", async function () {
+
+      try {
+          await fundWalletInst.adminRefund({from:outsideAcc});
+          assert(false, "throw was expected in line above.")
+      }
+      catch(e){
+          assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+      }
+
+      await fundWalletInst.adminRefund({from:admin});
+      let balance = await Helper.getBalancePromise(fundWalletInst.address);
+      assert.equal(balance, 0, "incorrect balance")
+
+      let raisedBal = parseInt(await fundWalletInst.raisedBalance.call());
+      assert.equal(raisedBal, 0, "incorrect balance");
+    });
+
+})
+
+contract('FundWallet - profitable scenario', function(accounts) {
+
+  it("Should init Fund Wallet and test token", async function () {
+      // set account addresses
+      admin = accounts[0];
+      backupAdmin = accounts[1];
+      contributor1 = accounts[2];
+      contributor2 = accounts[4];
+      contributor3 = accounts[5];
+      reserve = accounts[6];
+      outsideAcc = accounts[7];
+      newAdmin = accounts[8];
+      let egAdminStake = 1000;
+      let egAdminCarry = 2000;
+      let corContAmount = 500;
+      let profit = 1000;
+
+      fundWalletInst = await FundWallet.new(admin, backupAdmin, {});
+
+      token = await TestToken.new("test", "tst", 18);
+
+      //success
+      await fundWalletInst.setTimePeriods("60", "60", "60", "60", {from:admin});
+
+      await fundWalletInst.setFundScheme(egAdminStake, egAdminCarry, {from:admin});
+
+      await fundWalletInst.setReserve(reserve, {from:admin});
+
+      await fundWalletInst.addContributor(contributor1, {from:admin});
+      await fundWalletInst.addContributor(contributor2, {from:admin});
+
+      await Helper.advanceTimeAndBlock(3650);
+
+      await fundWalletInst.adminDeposit({from:admin, value:egAdminStake});
+
+      await fundWalletInst.contributorDeposit({from:contributor1, value:corContAmount});
+      await fundWalletInst.contributorDeposit({from:contributor2, value:corContAmount});
+
+      await Helper.advanceTimeAndBlock(3650);
+
+      await Helper.sendEtherWithPromise(outsideAcc, fundWalletInst.address, profit);
+
+      await Helper.advanceTimeAndBlock(3650);
+    });
+
+    it("Should log end balance and check balances", async function () {
+      await Helper.advanceTimeAndBlock(3650);
+      await fundWalletInst.logEndBal();
+
+      let loggedEndBal = parseInt(await fundWalletInst.endBalance.call());
+      let fwEndBal = await Helper.getBalancePromise(fundWalletInst.address);
+
+      assert.equal(loggedEndBal, parseInt(fwEndBal), "incorrect balance")
+    });
+
+    it("Should make admin claim and check balance", async function () {
+      let raisedBalance = parseInt(await fundWalletInst.raisedBalance.call());
+      let endBal = parseInt(await fundWalletInst.endBalance.call());
+      let adminStake = parseInt(await fundWalletInst.stake.call(admin));
+      let profit = endBal - raisedBalance;
+      let reward = profit*(0.2);
+      let initialStake = 1000;
+      let payoff = ((0.8*profit)*(adminStake/raisedBalance));
+      let adminTtl = reward+initialStake+payoff;
+
+      let fwStartBal = await Helper.getBalancePromise(fundWalletInst.address);
+      await fundWalletInst.adminClaim({from:admin});
+      let fwEndBal = await Helper.getBalancePromise(fundWalletInst.address);
+      let fwChangeBal = parseInt(fwStartBal) - parseInt(fwEndBal);
+      assert.equal(fwChangeBal, adminTtl, "wrong balance");
+    });
+
+    it("Should claim C1's share and check balance", async function () {
+      let raisedBalance = parseInt(await fundWalletInst.raisedBalance.call());
+      let endBal = parseInt(await fundWalletInst.endBalance.call());
+      let contStake = parseInt(await fundWalletInst.stake.call(contributor1));
+      let profit = endBal - raisedBalance;
+      let payoff = ((0.8*profit)*(contStake/raisedBalance));
+      let contTtl = payoff+contStake;
+
+      let fwStartBal = await Helper.getBalancePromise(fundWalletInst.address);
+      await fundWalletInst.contributorClaim({from:contributor1});
+      let fwEndBal = await Helper.getBalancePromise(fundWalletInst.address);
+      let fwChangeBal = parseInt(fwStartBal) - parseInt(fwEndBal);
+      assert.equal(fwChangeBal, contTtl, "wrong balance");
+    });
+
+    it("Should claim C2's share and check balance", async function () {
+      let raisedBalance = parseInt(await fundWalletInst.raisedBalance.call());
+      let endBal = parseInt(await fundWalletInst.endBalance.call());
+      let contStake = parseInt(await fundWalletInst.stake.call(contributor2));
+      let profit = endBal - raisedBalance;
+      let payoff = ((0.8*profit)*(contStake/raisedBalance));
+      let contTtl = payoff+contStake;
+
+      let fwStartBal = await Helper.getBalancePromise(fundWalletInst.address);
+      await fundWalletInst.contributorClaim({from:contributor2});
+      let fwEndBal = await Helper.getBalancePromise(fundWalletInst.address);
+      let fwChangeBal = parseInt(fwStartBal) - parseInt(fwEndBal);
+      assert.equal(fwChangeBal, contTtl, "wrong balance");
     });
 
 });
