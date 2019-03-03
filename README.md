@@ -1,6 +1,6 @@
-# Fund Wallet and Kyber Integration
+# Distributed Liquidity Pool
 
-This repo is for setting up a simulation of the DLP infrastructure and its integration with Kyber Network.
+This repo is for setting up a simulation of the DLP infrastructure (Kyber Fund Reserve, Fund Wallet) and its integration with Kyber Network.
 
 ## Prerequisites
 
@@ -17,7 +17,7 @@ sudo npm install -g ganache-cli
 
 3. Truffle
 
-Install the latest Truffle v5 beta.
+Install the following version of Truffle.
 
 ```
 sudo npm install -g truffle@5.0.0-beta.1
