@@ -1,7 +1,6 @@
 # Fund Wallet and Kyber Integration
 
-This repo is for testing the DLP infrastructure and ints integration with Kyber Network.
-Currently won't work due to ongoing work on tests - should work as below if "mockContracts" and "test" folders are removed.
+This repo is for testing the DLP infrastructure and its integration with Kyber Network.
 
 ## Prerequisites
 
@@ -41,6 +40,7 @@ In a new terminal session, connect to the ganache network, and run the truffle m
 ```
 truffle migrate --network development
 ```
+Note: there may be an "Invalid JSON RPC response" error due to Truffle HD Wallet Provider error - the contracts should still deploy and everything should still work correctly - just ignore this.
 
 ### Set Up Fund Wallet
 
