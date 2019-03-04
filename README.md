@@ -12,7 +12,7 @@ Install the Ganache AppImage by downloading here https://truffleframework.com/ga
 To use the provided Ganache snapshot, install `ganache-cli`.
 
 ```
-sudo npm install -g ganache-cli
+npm install -g ganache-cli
 ```
 
 3. Truffle
@@ -20,7 +20,7 @@ sudo npm install -g ganache-cli
 Install the following version of Truffle.
 
 ```
-sudo npm install -g truffle@5.0.0-beta.1
+npm install -g truffle@5.0.0-beta.1
 ```
 
 4. Install the rest of the NPM packages
