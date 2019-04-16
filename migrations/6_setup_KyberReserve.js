@@ -8,6 +8,7 @@ const SanityRates = artifacts.require('./SanityRates.sol');
 const FundWallet = artifacts.require('./FundWallet.sol');
 const FundReserve = artifacts.require('./KyberFundReserve.sol');
 
+
 const KNC = artifacts.require('./mockTokens/KyberNetworkCrystal.sol');
 const OMG = artifacts.require('./mockTokens/OmiseGo.sol');
 const SALT = artifacts.require('./mockTokens/Salt.sol');
@@ -29,6 +30,7 @@ function tx(result, call) {
 }
 
 module.exports = async (deployer, network, accounts) => {
+  const operator = accounts[1];
   const reserveWallet = accounts[5];
 
   // Set the instances
@@ -54,10 +56,9 @@ module.exports = async (deployer, network, accounts) => {
   );
 
   // Add reserve to network
-  tx(await NetworkInstance.addReserve(FundReserve.address, true), 'addReserve()');
+  tx(await NetworkInstance.addReserve(FundReserve.address, false, { from: operator }), 'addReserve()');
 
-  //i think reserve - as json unchanged
-  Object.keys(tokenConfig.Reserve).forEach(async (key) => {
+  Object.keys(tokenConfig.FedPriceReserve).forEach(async (key) => {
     // Add the withdrawal address for each token
     tx(
       await FundReserveInstance.approveWithdrawAddress(eval(key).address, reserveWallet, true),
@@ -72,6 +73,7 @@ module.exports = async (deployer, network, accounts) => {
         true,
         true,
         true,
+        { from: operator },
       ),
       'listPairForReserve()',
     );

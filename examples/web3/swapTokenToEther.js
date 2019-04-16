@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+
+// All code examples in this guide have not been audited and should not be used in production.
+// If so, it is done at your own risk!
+
 /* eslint-disable no-underscore-dangle, no-unused-vars */
 const BN = require('bn.js');
 const fs = require('fs');
@@ -15,9 +19,8 @@ const web3 = new Web3(provider);
 const { addresses, wallets } = provider;
 const gasPrice = web3.utils.toWei(new BN(10), 'gwei');
 
-const KyberNetworkAddress = '0xA46E01606f9252fa833131648f4D855549BcE9D9';
 const KyberNetworkProxyABI = JSON.parse(fs.readFileSync('./abi/KyberNetworkProxy.abi', 'utf8'));
-const KyberNetworkProxyAddress = '0xF6084Ad447076da0246cD28e104533f9f51dbD2F';
+const KyberNetworkProxyAddress = '0xd3add19ee7e5287148a5866784aE3C55bd4E375A';
 const NetworkProxyInstance = new web3.eth.Contract(KyberNetworkProxyABI, KyberNetworkProxyAddress);
 
 const ETH_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
@@ -35,7 +38,7 @@ function stdlog(input) {
 }
 
 function tx(result, call) {
-  const logs = (result.logs.length > 0) ? result.logs[0] : { address: null, event: null };
+  const logs = result.logs.length > 0 ? result.logs[0] : { address: null, event: null };
 
   console.log();
   console.log(`   ${call}`);
@@ -45,13 +48,12 @@ function tx(result, call) {
   console.log();
 }
 
-async function sendTx(txObject) {
+async function sendTx(txObject, txTo) {
   const nonce = await web3.eth.getTransactionCount(userWallet);
   const gas = 500 * 1000;
 
   const txData = txObject.encodeABI();
   const txFrom = userWallet;
-  const txTo = txObject._parent.options.address;
 
   const txParams = {
     from: txFrom,
@@ -82,53 +84,71 @@ async function main() {
   stdlog('- START -');
   stdlog(`KyberNetworkProxy (${KyberNetworkProxyAddress})`);
 
-  stdlog(`KNC balance of ${userWallet} = ${web3.utils.fromWei(await KNCInstance.methods.balanceOf(userWallet).call())}`);
-  stdlog(`MANA balance of ${userWallet} = ${web3.utils.fromWei(await MANAInstance.methods.balanceOf(userWallet).call())}`);
-  stdlog(`ETH balance of ${userWallet} = ${web3.utils.fromWei(await web3.eth.getBalance(userWallet))}`);
+  stdlog(
+    `KNC balance of ${userWallet} = ${web3.utils.fromWei(
+      await KNCInstance.methods.balanceOf(userWallet).call(),
+    )}`,
+  );
+  stdlog(
+    `MANA balance of ${userWallet} = ${web3.utils.fromWei(
+      await MANAInstance.methods.balanceOf(userWallet).call(),
+    )}`,
+  );
+  stdlog(
+    `ETH balance of ${userWallet} = ${web3.utils.fromWei(await web3.eth.getBalance(userWallet))}`,
+  );
 
   // Approve the KyberNetwork contract to spend user's tokens
-  txObject = KNCInstance.methods.approve(
-    KyberNetworkProxyAddress,
-    web3.utils.toWei('1000000'),
-  );
-  await sendTx(txObject);
-  txObject = MANAInstance.methods.approve(
-    KyberNetworkProxyAddress,
-    web3.utils.toWei('1000000'),
-  );
-  await sendTx(txObject);
+  txObject = KNCInstance.methods.approve(KyberNetworkProxyAddress, web3.utils.toWei('1000000'));
+  await sendTx(txObject, KNC_ADDRESS);
+  txObject = MANAInstance.methods.approve(KyberNetworkProxyAddress, web3.utils.toWei('1000000'));
+  await sendTx(txObject, MANA_ADDRESS);
 
-  ({ expectedRate, slippageRate } = await NetworkProxyInstance.methods.getExpectedRate(
-    KNC_ADDRESS, // srcToken
-    ETH_ADDRESS, // destToken
-    web3.utils.toWei('100'), // srcQty
-  ).call());
+  ({ expectedRate, slippageRate } = await NetworkProxyInstance.methods
+    .getExpectedRate(
+      KNC_ADDRESS, // srcToken
+      ETH_ADDRESS, // destToken
+      web3.utils.toWei('100'), // srcQty
+    )
+    .call());
 
   txObject = NetworkProxyInstance.methods.swapTokenToEther(
     KNC_ADDRESS, // srcToken
     web3.utils.toWei('100'), // srcAmount
     expectedRate, // minConversionRate
   );
-  result = await sendTx(txObject);
+  result = await sendTx(txObject, KyberNetworkProxyAddress);
   tx(result, 'KNC <-> ETH swapTokenToEther()');
 
-  ({ expectedRate, slippageRate } = await NetworkProxyInstance.methods.getExpectedRate(
-    MANA_ADDRESS, // srcToken
-    ETH_ADDRESS, // destToken
-    web3.utils.toWei('1000'), // srcQty
-  ).call());
+  ({ expectedRate, slippageRate } = await NetworkProxyInstance.methods
+    .getExpectedRate(
+      MANA_ADDRESS, // srcToken
+      ETH_ADDRESS, // destToken
+      web3.utils.toWei('1000'), // srcQty
+    )
+    .call());
 
   txObject = NetworkProxyInstance.methods.swapTokenToEther(
     MANA_ADDRESS, // srcToken
     web3.utils.toWei('1000'), // srcAmount
     expectedRate, // minConversionRate
   );
-  result = await sendTx(txObject);
+  result = await sendTx(txObject, KyberNetworkProxyAddress);
   tx(result, 'MANA <-> ETH swapTokenToEther()');
 
-  stdlog(`KNC balance of ${userWallet} = ${web3.utils.fromWei(await KNCInstance.methods.balanceOf(userWallet).call())}`);
-  stdlog(`MANA balance of ${userWallet} = ${web3.utils.fromWei(await MANAInstance.methods.balanceOf(userWallet).call())}`);
-  stdlog(`ETH balance of ${userWallet} = ${web3.utils.fromWei(await web3.eth.getBalance(userWallet))}`);
+  stdlog(
+    `KNC balance of ${userWallet} = ${web3.utils.fromWei(
+      await KNCInstance.methods.balanceOf(userWallet).call(),
+    )}`,
+  );
+  stdlog(
+    `MANA balance of ${userWallet} = ${web3.utils.fromWei(
+      await MANAInstance.methods.balanceOf(userWallet).call(),
+    )}`,
+  );
+  stdlog(
+    `ETH balance of ${userWallet} = ${web3.utils.fromWei(await web3.eth.getBalance(userWallet))}`,
+  );
 
   stdlog('- END -');
 }

@@ -23,6 +23,7 @@ function tx(result, call) {
 }
 
 module.exports = async (deployer, network, accounts) => {
+  const operator = accounts[1];
   const reserveWallet = accounts[5];
 
   // Set the instances
@@ -34,13 +35,13 @@ module.exports = async (deployer, network, accounts) => {
     await AutomatedReserveInstance.setContracts(
       Network.address,
       LiquidityConversionRates.address,
-      0,
+      '0x0000000000000000000000000000000000000000',
     ),
     'setContracts()',
   );
 
   // Add reserve to network
-  tx(await NetworkInstance.addReserve(AutomatedReserve.address, true), 'addReserve()');
+  tx(await NetworkInstance.addReserve(AutomatedReserve.address, false, { from: operator }), 'addReserve()');
 
   // Add the withdrawal address for each token
   tx(
@@ -51,11 +52,12 @@ module.exports = async (deployer, network, accounts) => {
   // List token pairs for the reserve
   tx(
     await NetworkInstance.listPairForReserve(
-      AutomatedReserveInstance.address,
+      AutomatedReserve.address,
       MANA.address,
       true,
       true,
       true,
+      { from: operator },
     ),
     'listPairForReserve()',
   );
