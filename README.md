@@ -1,10 +1,10 @@
 # Distributed Liquidity Pool
 
-This repo is for setting up a simulation of the DLP infrastructure (Kyber Fund Reserve, Fund Wallet) and its integration with Kyber Network.
+This repo is for setting up a simulation of the DLP infrastructure (Kyber Fund Reserve, Fund Wallet) and its integration with Kyber Network. This simulation is based on the [Kyber Workshop Repository](https://nodejs.org/en/download/).
 
 ## Prerequisites
 
-1. Node and NPM LTS versions `10.14.1` and `6.4.1` respectively. Download from [nodejs.org](https://nodejs.org/en/download/)
+1. Node and NPM LTS versions `10.14.1` and `6.4.1` respectively. Download from [nodejs.org](https://github.com/KyberNetwork/workshop)
 
 2. Ganache
 
