@@ -17,10 +17,10 @@ npm install -g ganache-cli
 
 3. Truffle
 
-Install the following version of Truffle.
+Install the latest Truffle (working at 5.0.12).
 
 ```
-npm install -g truffle@5.0.0-beta.1
+npm install -g truffle@latest
 ```
 
 4. Install the rest of the NPM packages
@@ -40,7 +40,7 @@ In a new terminal session, connect to the ganache network, and run the truffle m
 ```
 truffle migrate --network development
 ```
-Note: there may be an "Invalid JSON RPC response" error due to Truffle HD Wallet Provider error - the contracts should still deploy and everything should still work correctly - just ignore this.
+Note: there may be truffle errors however if the console begins printing the deployment summary all the contracts have been deployed and the below should work.
 
 ### Set Up Fund Wallet
 
@@ -74,7 +74,7 @@ Token to ETH:
 truffle exec examples/truffle/swapTokenToEther.js
 ```
 
-After that the Liquidation period begins and only ETH to Token trades will be processed as the fund is liquidating its token reserves.
+After that the Liquidation period begins and only **ETH to Token trades** will be processed as the fund is liquidating its token reserves. **Token to Eth trades** will hang (and revert) as a result.
 **This period will also last 3 minutes**
 ```
 truffle exec examples/truffle/swapEtherToToken.js
