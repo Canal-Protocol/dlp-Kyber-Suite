@@ -85,4 +85,4 @@ After this period is over the ending balance can be logged and contributors/admi
 ```
 truffle exec fund/makeClaims.js
 ```
-
+**Remember to reset the repo or delete the build folder when attempting to run again**
